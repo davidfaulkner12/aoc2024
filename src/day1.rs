@@ -1,6 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs};
 
 use sorted_vec::SortedVec;
+
+use crate::problem::Problem;
 
 fn deserialize(s: &str) -> (SortedVec<i64>, SortedVec<i64>) {
     let mut left = SortedVec::new();
@@ -21,26 +23,52 @@ fn count_distance(left: &[i64], right: &[i64]) -> i64 {
         .sum()
 }
 
-fn prob1(data: &str) -> i64 {
-    let (l, r) = deserialize(data);
-    count_distance(&l, &r)
-}
-
-fn prob2(data: &str) -> usize {
-    let (l, r) = deserialize(data);
-    let f = frequency(&r);
-    l.iter().map(|n| *n as usize * f.get(n).unwrap_or(&0)).sum()
+fn multiply_frequency(left: &[i64], f: HashMap<i64, usize>) -> usize {
+    left.iter()
+        .map(|n| *n as usize * f.get(n).unwrap_or(&0))
+        .sum()
 }
 
 fn frequency(d: &SortedVec<i64>) -> HashMap<i64, usize> {
     d.chunk_by(|a, b| a == b).map(|s| (s[0], s.len())).collect()
 }
 
+#[derive(Default)]
+pub struct Day1 {
+    left: SortedVec<i64>,
+    right: SortedVec<i64>,
+}
+
+impl Day1 {
+    pub fn new() -> Self {
+        let data = fs::read_to_string("data/day1.txt").unwrap();
+        let (left, right) = deserialize(&data);
+        Day1 { left, right }
+    }
+    fn prob1_inner(&mut self) -> i64 {
+        count_distance(&self.left, &self.right)
+    }
+    fn prob2_inner(&mut self) -> usize {
+        let f = frequency(&self.right);
+        multiply_frequency(&self.left, f)
+    }
+}
+
+impl Problem for Day1 {
+    fn prob1(&mut self) -> Box<dyn std::fmt::Display> {
+        Box::new(self.prob1_inner())
+    }
+
+    fn prob2(&mut self) -> Box<dyn std::fmt::Display> {
+        Box::new(self.prob2_inner())
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, fs};
+    use std::collections::HashMap;
 
-    use crate::day1::{count_distance, deserialize, frequency, prob1, prob2};
+    use crate::day1::{count_distance, deserialize, frequency, Day1};
 
     const TEST_DATA: &str = "3   4
             4   3
@@ -66,14 +94,6 @@ mod tests {
     }
 
     #[test]
-    fn test_problem_1() {
-        let data = fs::read_to_string("data/day1.txt").unwrap();
-
-        let res = prob1(&data);
-        assert_eq!(res, 2000468);
-    }
-
-    #[test]
     fn test_frequency() {
         let (_, right) = deserialize(TEST_DATA);
 
@@ -84,15 +104,20 @@ mod tests {
 
     #[test]
     fn test_problem_2_test() {
-        let res = prob2(TEST_DATA);
+        let (left, right) = deserialize(TEST_DATA);
+        let mut day1 = Day1 { left, right };
+        let res = day1.prob2_inner();
         assert_eq!(res, 31);
     }
 
     #[test]
     fn test_problem_2() {
-        let data = fs::read_to_string("data/day1.txt").unwrap();
+        let mut day1 = Day1::new();
 
-        let res = prob2(&data);
+        let res = day1.prob1_inner();
+        assert_eq!(res, 2000468);
+
+        let res = day1.prob2_inner();
         assert_eq!(res, 18567089);
     }
 }
