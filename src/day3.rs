@@ -99,4 +99,112 @@ mod tests {
         assert_eq!(day3.prob1_inner(), 183380722);
         assert_eq!(day3.prob2_inner(), 82733683);
     }
+
+    use chumsky::prelude::*;
+
+    #[derive(Debug, PartialEq)]
+    enum Expr {
+        Null,
+        Num(u64),
+        Seq(Vec<Box<Expr>>),
+        Mul(u64, u64),
+    }
+
+    fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
+        let int = text::int(10).map(|s: String| Expr::Num(s.parse().unwrap()));
+        let junk = int.not().ignored().map(|_| Expr::Null);
+
+        choice((dont_do(), int, junk)).repeated().map(|v| {
+            Expr::Seq(
+                v.into_iter()
+                    .filter(|e| !matches!(e, Expr::Null))
+                    .map(Box::new)
+                    .collect(),
+            )
+        })
+    }
+
+    fn mul() -> impl Parser<char, Expr, Error = Simple<char>> {
+        let int = text::int(10).map(|s: String| s.parse().unwrap());
+        just("mul(")
+            .ignore_then(int)
+            .then_ignore(just(","))
+            .then(int)
+            .then_ignore(just(")"))
+            .map(|(l, r)| Expr::Mul(l, r))
+    }
+
+    fn dont_do() -> impl Parser<char, Expr, Error = Simple<char>> {
+        let do_end = just("don't").not().rewind().then(just("do"));
+        do_end
+            .clone()
+            .not()
+            .repeated()
+            .ignored()
+            .map(|_| Expr::Null)
+            .delimited_by(just("don't"), do_end)
+    }
+
+    #[test]
+    fn test_parser() {
+        let p = parser();
+        assert_eq!(
+            p.parse("392"),
+            Ok(Expr::Seq(vec![Box::new(Expr::Num(392))]))
+        );
+        assert_eq!(p.parse("a"), Ok(Expr::Seq(vec![])));
+        assert_eq!(
+            p.parse("a393ajsdfjkl39320"),
+            Ok(Expr::Seq(vec![
+                Box::new(Expr::Num(393)),
+                Box::new(Expr::Num(39320))
+            ]))
+        );
+    }
+
+    #[test]
+    fn test_mul() {
+        let p = mul();
+        assert_eq!(p.parse("mul(192,39)"), Ok(Expr::Mul(192, 39)))
+    }
+
+    #[test]
+    fn test_dont_do() {
+        let p = dont_do();
+        assert_eq!(p.parse("don'tabcdefghdo"), Ok(Expr::Null));
+        assert_eq!(p.parse("don'tabcdefghdon'tjaksdfjdo"), Ok(Expr::Null));
+    }
+
+    #[test]
+    fn test_dont_do_number() {
+        let p = parser();
+        assert_eq!(
+            p.parse("asdf393ajsddon't39203asdf3928123do3921932"),
+            Ok(Expr::Seq(vec![
+                Box::new(Expr::Num(393)),
+                Box::new(Expr::Num(3921932))
+            ]))
+        );
+    }
+
+    #[test]
+    fn test_prob2_example_chumsky() {
+        let junk = mul().not().ignored().map(|_| Expr::Null);
+        let p = choice((dont_do(), mul(), junk)).repeated().map(|v| {
+            Expr::Seq(
+                v.into_iter()
+                    .filter(|e| !matches!(e, Expr::Null))
+                    .map(Box::new)
+                    .collect(),
+            )
+        });
+        let res = p.parse(TEST_DATA_2);
+        assert_eq!(
+            res,
+            Ok(Expr::Seq(vec![
+                Box::new(Expr::Mul(2, 4)),
+                Box::new(Expr::Mul(8, 5)),
+            ]))
+        );
+    }
 }
