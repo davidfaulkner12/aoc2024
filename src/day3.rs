@@ -74,10 +74,97 @@ fn register_day(p: &mut HashMap<String, fn() -> Box<dyn Problem>>) {
     p.insert("day3".to_owned(), || Box::new(Day3::new()));
 }
 
+use chumsky::prelude::*;
+
+#[derive(Debug, PartialEq)]
+enum Expr {
+    Null,
+    Num(u64),
+    Seq(Vec<Box<Expr>>),
+    Mul(u64, u64),
+}
+
+fn mul() -> impl Parser<char, Expr, Error = Simple<char>> {
+    let int = text::int(10).map(|s: String| s.parse().unwrap());
+    just("mul(")
+        .ignore_then(int)
+        .then_ignore(just(","))
+        .then(int)
+        .then_ignore(just(")"))
+        .map(|(l, r)| Expr::Mul(l, r))
+}
+
+fn dont_do() -> impl Parser<char, Expr, Error = Simple<char>> {
+    let do_end = just("don't").not().rewind().then(just("do"));
+    do_end
+        .clone()
+        .not()
+        .repeated()
+        .ignored()
+        .map(|_| Expr::Null)
+        .delimited_by(just("don't"), do_end)
+}
+
+fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
+    let junk = mul().not().ignored().map(|_| Expr::Null);
+    choice((dont_do(), mul(), junk)).repeated().map(|v| {
+        Expr::Seq(
+            v.into_iter()
+                .filter(|e| !matches!(e, Expr::Null))
+                .map(Box::new)
+                .collect(),
+        )
+    })
+}
+
+#[derive(Default)]
+pub struct Day3Chumsky {}
+
+impl Day3Chumsky {
+    pub fn new() -> Self {
+        Day3Chumsky {}
+    }
+    fn prob1_inner(&mut self) -> String {
+        "Not Implemented".to_string()
+    }
+
+    fn prob2_inner(&mut self) -> u64 {
+        let data = fs::read_to_string("data/day3.txt").unwrap();
+        let p = parser();
+        let res = p.parse(data).unwrap();
+        match res {
+            Expr::Seq(v) => v
+                .iter()
+                .map(|mul| match mul.as_ref() {
+                    Expr::Mul(a, b) => a * b,
+                    Expr::Null => 0,
+                    _ => panic!("Shouldn't have anything else"),
+                })
+                .sum(),
+            _ => panic!("Shouldn't have anything else"),
+        }
+    }
+}
+
+impl Problem for Day3Chumsky {
+    fn prob1(&mut self) -> Box<dyn std::fmt::Display> {
+        Box::new(self.prob1_inner())
+    }
+
+    fn prob2(&mut self) -> Box<dyn std::fmt::Display> {
+        Box::new(self.prob2_inner())
+    }
+}
+
+#[distributed_slice(PROBLEMS)]
+fn register_day_chumsky(p: &mut HashMap<String, fn() -> Box<dyn Problem>>) {
+    p.insert("day3-chumsky".to_owned(), || Box::new(Day3Chumsky::new()));
+}
+
 #[cfg(test)]
 mod tests {
 
-    use super::{get_pairs, get_pairs_stateful, Day3};
+    use super::*;
 
     const TEST_DATA: &str =
         "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))";
@@ -106,17 +193,7 @@ mod tests {
         assert_eq!(day3.prob2_inner(), 82733683);
     }
 
-    use chumsky::prelude::*;
-
-    #[derive(Debug, PartialEq)]
-    enum Expr {
-        Null,
-        Num(u64),
-        Seq(Vec<Box<Expr>>),
-        Mul(u64, u64),
-    }
-
-    fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
+    fn num_parser() -> impl Parser<char, Expr, Error = Simple<char>> {
         let int = text::int(10).map(|s: String| Expr::Num(s.parse().unwrap()));
         let junk = int.not().ignored().map(|_| Expr::Null);
 
@@ -130,30 +207,9 @@ mod tests {
         })
     }
 
-    fn mul() -> impl Parser<char, Expr, Error = Simple<char>> {
-        let int = text::int(10).map(|s: String| s.parse().unwrap());
-        just("mul(")
-            .ignore_then(int)
-            .then_ignore(just(","))
-            .then(int)
-            .then_ignore(just(")"))
-            .map(|(l, r)| Expr::Mul(l, r))
-    }
-
-    fn dont_do() -> impl Parser<char, Expr, Error = Simple<char>> {
-        let do_end = just("don't").not().rewind().then(just("do"));
-        do_end
-            .clone()
-            .not()
-            .repeated()
-            .ignored()
-            .map(|_| Expr::Null)
-            .delimited_by(just("don't"), do_end)
-    }
-
     #[test]
-    fn test_parser() {
-        let p = parser();
+    fn test_num_parser() {
+        let p = num_parser();
         assert_eq!(
             p.parse("392"),
             Ok(Expr::Seq(vec![Box::new(Expr::Num(392))]))
@@ -183,7 +239,7 @@ mod tests {
 
     #[test]
     fn test_dont_do_number() {
-        let p = parser();
+        let p = num_parser();
         assert_eq!(
             p.parse("asdf393ajsddon't39203asdf3928123do3921932"),
             Ok(Expr::Seq(vec![
@@ -195,15 +251,7 @@ mod tests {
 
     #[test]
     fn test_prob2_example_chumsky() {
-        let junk = mul().not().ignored().map(|_| Expr::Null);
-        let p = choice((dont_do(), mul(), junk)).repeated().map(|v| {
-            Expr::Seq(
-                v.into_iter()
-                    .filter(|e| !matches!(e, Expr::Null))
-                    .map(Box::new)
-                    .collect(),
-            )
-        });
+        let p = parser();
         let res = p.parse(TEST_DATA_2);
         assert_eq!(
             res,
@@ -213,4 +261,10 @@ mod tests {
             ]))
         );
     }
+
+    //#[test]
+    //fn test_prob_chumsky() {
+    //    let mut day3 = Day3Chumsky::new();
+    //    assert_eq!(day3.prob2_inner(), 82733683);
+    //}
 }
