@@ -1,9 +1,14 @@
 use core::str;
-use std::{cmp::min, collections::BTreeMap, fs};
+use std::{
+    cmp::min,
+    collections::{BTreeMap, HashMap},
+    fs,
+};
 
 use itertools::Itertools;
+use linkme::distributed_slice;
 
-use crate::problem::Problem;
+use crate::problem::{Problem, PROBLEMS};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
 struct Point {
@@ -195,6 +200,11 @@ impl Problem for Day4 {
     fn prob2(&mut self) -> Box<dyn std::fmt::Display> {
         Box::new(self.prob2_inner())
     }
+}
+
+#[distributed_slice(PROBLEMS)]
+fn register_day(p: &mut HashMap<String, fn() -> Box<dyn Problem>>) {
+    p.insert("day4".to_owned(), || Box::new(Day4::new()));
 }
 
 #[cfg(test)]

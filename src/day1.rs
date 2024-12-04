@@ -1,8 +1,9 @@
 use std::{collections::HashMap, fs};
 
+use linkme::distributed_slice;
 use sorted_vec::SortedVec;
 
-use crate::problem::Problem;
+use crate::{problem::Problem, PROBLEMS};
 
 fn deserialize(s: &str) -> (SortedVec<i64>, SortedVec<i64>) {
     let mut left = SortedVec::new();
@@ -62,6 +63,11 @@ impl Problem for Day1 {
     fn prob2(&mut self) -> Box<dyn std::fmt::Display> {
         Box::new(self.prob2_inner())
     }
+}
+
+#[distributed_slice(PROBLEMS)]
+fn register_day(p: &mut HashMap<String, fn() -> Box<dyn Problem>>) {
+    p.insert("day1".to_owned(), || Box::new(Day1::new()));
 }
 
 #[cfg(test)]

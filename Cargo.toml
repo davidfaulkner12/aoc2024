@@ -6,6 +6,6 @@ edition = "2021"
 [dependencies]
 chumsky = "0.9.3"
 itertools = "0.13.0"
-linkme = "1.62.0"
+linkme = "0.3.31"
 regex = "1.11.1"
 sorted-vec = "0.8.5"

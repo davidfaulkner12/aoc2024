@@ -1,4 +1,6 @@
-use problem::Problem;
+use std::{collections::HashMap, env::args};
+
+use problem::{Problem, PROBLEMS};
 
 mod day1;
 mod day2;
@@ -7,12 +9,14 @@ mod day4;
 mod poc;
 mod problem;
 
-fn get_problem(s: &str) -> Box<dyn Problem> {
-    Box::new(day1::Day1::new())
-}
-
 fn main() {
-    let mut problem = get_problem("day1");
+    let mut problems: HashMap<String, fn() -> Box<dyn Problem>> = HashMap::new();
+
+    for p in PROBLEMS {
+        p(&mut problems);
+    }
+
+    let mut problem = problems.get(&args().nth(1).unwrap()).unwrap()();
     let prob1 = problem.prob1();
     let prob2 = problem.prob2();
 

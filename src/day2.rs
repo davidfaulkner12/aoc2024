@@ -1,4 +1,8 @@
-use std::convert::identity;
+use std::{collections::HashMap, convert::identity, fs};
+
+use linkme::distributed_slice;
+
+use crate::problem::{Problem, PROBLEMS};
 
 fn parse(s: &str) -> Vec<Vec<usize>> {
     s.lines()
@@ -76,41 +80,68 @@ fn is_safe_report(data: &[usize]) -> Report {
         .fold(Report::Unstarted, |report, n| report.include(*n))
 }
 
-fn prob1(data: &str) -> usize {
-    let data = parse(data);
-    data.into_iter()
-        .map(|v| if is_safe_report(&v).into() { 1 } else { 0 })
-        .sum()
+struct Day2 {
+    data: Vec<Vec<usize>>,
 }
 
-fn prob2(data: &str) -> usize {
-    let data = parse(data);
-    data.into_iter()
-        .map(|v| match is_safe_report(&v) {
-            Report::Failed => {
-                if (0..v.len())
-                    .map(|n| {
-                        let mut c = v.clone();
-                        c.remove(n);
-                        is_safe_report(&c).into()
-                    })
-                    .any(identity)
-                {
-                    1
-                } else {
-                    0
+impl Day2 {
+    pub fn new() -> Self {
+        let data = fs::read_to_string("data/day2.txt").unwrap();
+        Day2::with_data(&data)
+    }
+    fn with_data(s: &str) -> Self {
+        Day2 { data: parse(s) }
+    }
+    fn prob1_inner(&mut self) -> usize {
+        self.data
+            .iter()
+            .map(|v| if is_safe_report(v).into() { 1 } else { 0 })
+            .sum()
+    }
+    fn prob2_inner(&mut self) -> usize {
+        self.data
+            .iter()
+            .map(|v| match is_safe_report(&v) {
+                Report::Failed => {
+                    if (0..v.len())
+                        .map(|n| {
+                            let mut c = v.clone();
+                            c.remove(n);
+                            is_safe_report(&c).into()
+                        })
+                        .any(identity)
+                    {
+                        1
+                    } else {
+                        0
+                    }
                 }
-            }
-            _ => 1,
-        })
-        .sum()
+                _ => 1,
+            })
+            .sum()
+    }
+}
+
+impl Problem for Day2 {
+    fn prob1(&mut self) -> Box<dyn std::fmt::Display> {
+        Box::new(self.prob1_inner())
+    }
+
+    fn prob2(&mut self) -> Box<dyn std::fmt::Display> {
+        Box::new(self.prob2_inner())
+    }
+}
+
+#[distributed_slice(PROBLEMS)]
+fn register_day(p: &mut HashMap<String, fn() -> Box<dyn Problem>>) {
+    p.insert("day2".to_owned(), || Box::new(Day2::new()));
 }
 
 #[cfg(test)]
 mod tests {
     use std::fs;
 
-    use crate::day2::{is_safe, is_safe_report, parse, prob1, prob2, Report};
+    use super::*;
 
     const TEST_DATA: &str = "7 6 4 2 1
         1 2 7 8 9
@@ -163,23 +194,21 @@ mod tests {
     }
 
     #[test]
-    fn test_example_day1() {
-        assert_eq!(prob1(TEST_DATA), 2);
-    }
-
-    #[test]
-    fn test_day1() {
-        let data = fs::read_to_string("data/day2.txt").unwrap();
-        assert_eq!(prob1(&data), 282);
-    }
-    #[test]
-    fn test_example_prob2() {
-        assert_eq!(prob2(TEST_DATA), 4);
+    fn test_example_prob1() {
+        let mut day2 = Day2::with_data(TEST_DATA);
+        assert_eq!(day2.prob1_inner(), 2);
     }
 
     #[test]
     fn test_prob2() {
-        let data = fs::read_to_string("data/day2.txt").unwrap();
-        assert_eq!(prob2(&data), 349);
+        let mut day2 = Day2::with_data(TEST_DATA);
+        assert_eq!(day2.prob2_inner(), 4);
+    }
+
+    #[test]
+    fn test_day2() {
+        let mut day2 = Day2::new();
+        assert_eq!(day2.prob1_inner(), 282);
+        assert_eq!(day2.prob2_inner(), 349);
     }
 }

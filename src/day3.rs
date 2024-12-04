@@ -1,8 +1,9 @@
-use std::fs;
+use std::{collections::HashMap, fs};
 
+use linkme::distributed_slice;
 use regex::Regex;
 
-use crate::problem::Problem;
+use crate::problem::{Problem, PROBLEMS};
 
 fn get_pairs(s: &str) -> Vec<(usize, usize)> {
     let re = Regex::new(r"mul\(([0-9]+),([0-9]+)\)").unwrap();
@@ -66,6 +67,11 @@ impl Problem for Day3 {
     fn prob2(&mut self) -> Box<dyn std::fmt::Display> {
         Box::new(self.prob2_inner())
     }
+}
+
+#[distributed_slice(PROBLEMS)]
+fn register_day(p: &mut HashMap<String, fn() -> Box<dyn Problem>>) {
+    p.insert("day3".to_owned(), || Box::new(Day3::new()));
 }
 
 #[cfg(test)]
