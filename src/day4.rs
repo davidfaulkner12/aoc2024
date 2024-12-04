@@ -10,98 +10,109 @@ use linkme::distributed_slice;
 
 use crate::problem::{Problem, PROBLEMS};
 
+// Intuitively we use row/col because that's how we index Vec<String>
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
-struct Point {
-    x: usize,
-    y: usize,
+struct TextPoint {
+    row: usize,
+    col: usize,
 }
 
-impl Point {
+impl TextPoint {
     fn new(pair: (usize, usize)) -> Self {
-        Point {
-            x: pair.0,
-            y: pair.1,
+        TextPoint {
+            row: pair.0,
+            col: pair.1,
         }
     }
 
-    fn with_x(&self, x: usize) -> Self {
-        Point { x, y: self.y }
+    fn with_row(&self, row: usize) -> Self {
+        TextPoint { row, col: self.col }
     }
 
-    fn with_y(&self, y: usize) -> Self {
-        Point { x: self.x, y }
+    fn with_col(&self, col: usize) -> Self {
+        TextPoint { row: self.row, col }
     }
 }
 
-fn explode_point(p: Point, corner: Point, length: usize) -> Vec<Vec<Point>> {
-    let min_x = p.x.checked_sub(length - 1).unwrap_or(0);
-    let min_y = p.y.checked_sub(length - 1).unwrap_or(0);
-    let max_x = min(p.x + length - 1, corner.x);
-    let max_y = min(p.y + length - 1, corner.y);
+fn explode_point(p: TextPoint, corner: TextPoint, length: usize) -> Vec<Vec<TextPoint>> {
+    let min_row = p.row.checked_sub(length - 1).unwrap_or(0);
+    let min_col = p.col.checked_sub(length - 1).unwrap_or(0);
+    let max_row = min(p.row + length - 1, corner.row);
+    let max_col = min(p.col + length - 1, corner.col);
 
-    let with_x = |x| p.with_x(x);
-    let with_y = |y| p.with_y(y);
+    let with_row = |row| p.with_row(row);
+    let with_col = |col| p.with_col(col);
 
     let mut vectors = Vec::with_capacity(8);
     // N
-    vectors.push((min_x..=p.x).rev().map(with_x).collect());
+    vectors.push((min_row..=p.row).rev().map(with_row).collect());
 
     // NE
     vectors.push(
-        ((min_x..=p.x).rev())
-            .zip(p.y..=max_y)
-            .map(Point::new)
+        ((min_row..=p.row).rev())
+            .zip(p.col..=max_col)
+            .map(TextPoint::new)
             .collect(),
     );
 
     // E
-    vectors.push((p.y..=max_y).map(with_y).collect());
+    vectors.push((p.col..=max_col).map(with_col).collect());
 
     // SE
-    vectors.push((p.x..=max_x).zip(p.y..=max_y).map(Point::new).collect());
+    vectors.push(
+        (p.row..=max_row)
+            .zip(p.col..=max_col)
+            .map(TextPoint::new)
+            .collect(),
+    );
 
     // S
-    vectors.push((p.x..=max_x).map(with_x).collect());
+    vectors.push((p.row..=max_row).map(with_row).collect());
 
     // SW
     vectors.push(
-        (p.x..=max_x)
-            .zip((min_y..=p.y).rev())
-            .map(Point::new)
+        (p.row..=max_row)
+            .zip((min_col..=p.col).rev())
+            .map(TextPoint::new)
             .collect(),
     );
 
     // W
-    vectors.push((min_y..=p.y).rev().map(with_y).collect());
+    vectors.push((min_col..=p.col).rev().map(with_col).collect());
 
     // NW
     vectors.push(
-        (min_x..=p.x)
+        (min_row..=p.row)
             .rev()
-            .zip((min_y..=p.y).rev())
-            .map(Point::new)
+            .zip((min_col..=p.col).rev())
+            .map(TextPoint::new)
             .collect(),
     );
 
     vectors
 }
 
-fn extract_string_from_vector(puzzle: &Vec<&str>, vector: &[Point]) -> String {
+fn extract_string_from_vector(puzzle: &Vec<&str>, vector: &[TextPoint]) -> String {
     let bytes: Vec<_> = puzzle.iter().map(|s| s.as_bytes()).collect();
-    str::from_utf8(&vector.iter().map(|p| bytes[p.x][p.y]).collect::<Vec<_>>())
-        .unwrap()
-        .to_string()
+    str::from_utf8(
+        &vector
+            .iter()
+            .map(|p| bytes[p.row][p.col])
+            .collect::<Vec<_>>(),
+    )
+    .unwrap()
+    .to_string()
 }
 
-fn find_char_in_puzzle(puzzle: &Vec<&str>, c: u8) -> Vec<Point> {
+fn find_char_in_puzzle(puzzle: &Vec<&str>, c: u8) -> Vec<TextPoint> {
     let bytes: Vec<_> = puzzle.iter().map(|s| s.as_bytes()).collect();
     bytes
         .iter()
         .enumerate()
-        .flat_map(|(x, line)| {
-            line.iter().enumerate().filter_map(move |(y, maybe_c)| {
+        .flat_map(|(row, line)| {
+            line.iter().enumerate().filter_map(move |(col, maybe_c)| {
                 if c == *maybe_c {
-                    Some(Point { x, y })
+                    Some(TextPoint { row, col })
                 } else {
                     None
                 }
@@ -128,9 +139,9 @@ impl Day4 {
     }
 
     fn prob1_inner(&mut self) -> usize {
-        let corner = Point {
-            x: self.data.len() - 1,
-            y: self.data[0].len() - 1,
+        let corner = TextPoint {
+            row: self.data.len() - 1,
+            col: self.data[0].len() - 1,
         };
         let p = self.data.iter().map(AsRef::as_ref).collect();
         let ps = find_char_in_puzzle(&p, b'X');
@@ -150,9 +161,9 @@ impl Day4 {
     }
 
     fn prob2_inner(&mut self) -> usize {
-        let corner = Point {
-            x: self.data.len() - 1,
-            y: self.data[0].len() - 1,
+        let corner = TextPoint {
+            row: self.data.len() - 1,
+            col: self.data[0].len() - 1,
         };
         let p = self.data.iter().map(AsRef::as_ref).collect();
         let ps = find_char_in_puzzle(&p, b'M');
@@ -165,7 +176,7 @@ impl Day4 {
             .filter(|v| v.len() == 3)
             .collect();
 
-        let mut cs: BTreeMap<Point, Vec<Vec<Point>>> = BTreeMap::new();
+        let mut cs: BTreeMap<TextPoint, Vec<Vec<TextPoint>>> = BTreeMap::new();
 
         for v in vs {
             let k = v[1];
@@ -224,14 +235,23 @@ SAXAMASAAA
 MAMMMXMMMM
 MXMXAXMASX";
 
-    fn make_vector(ps: &[(usize, usize)]) -> Vec<Point> {
-        ps.iter().map(|(x, y)| Point { x: *x, y: *y }).collect()
+    fn make_vector(ps: &[(usize, usize)]) -> Vec<TextPoint> {
+        ps.iter()
+            .map(|(row, col)| TextPoint {
+                row: *row,
+                col: *col,
+            })
+            .collect()
     }
 
     #[test]
     fn test_basic() {
         assert_eq!(
-            explode_point(Point { x: 0, y: 0 }, Point { x: 3, y: 3 }, 4),
+            explode_point(
+                TextPoint { row: 0, col: 0 },
+                TextPoint { row: 3, col: 3 },
+                4
+            ),
             vec![
                 make_vector(&[(0, 0)]),
                 make_vector(&[(0, 0)]),
@@ -244,7 +264,11 @@ MXMXAXMASX";
             ]
         );
         assert_eq!(
-            explode_point(Point { x: 3, y: 3 }, Point { x: 3, y: 3 }, 4),
+            explode_point(
+                TextPoint { row: 3, col: 3 },
+                TextPoint { row: 3, col: 3 },
+                4
+            ),
             vec![
                 make_vector(&[(3, 3), (2, 3), (1, 3), (0, 3)]),
                 make_vector(&[(3, 3)]),
@@ -258,7 +282,11 @@ MXMXAXMASX";
         );
 
         assert_eq!(
-            explode_point(Point { x: 3, y: 0 }, Point { x: 3, y: 3 }, 4),
+            explode_point(
+                TextPoint { row: 3, col: 0 },
+                TextPoint { row: 3, col: 3 },
+                4
+            ),
             vec![
                 make_vector(&[(3, 0), (2, 0), (1, 0), (0, 0)]),
                 make_vector(&[(3, 0), (2, 1), (1, 2), (0, 3)]),
@@ -272,7 +300,11 @@ MXMXAXMASX";
         );
 
         assert_eq!(
-            explode_point(Point { x: 0, y: 3 }, Point { x: 3, y: 3 }, 4),
+            explode_point(
+                TextPoint { row: 0, col: 3 },
+                TextPoint { row: 3, col: 3 },
+                4
+            ),
             vec![
                 make_vector(&[(0, 3)]),
                 make_vector(&[(0, 3)]),

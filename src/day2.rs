@@ -139,8 +139,6 @@ fn register_day(p: &mut HashMap<String, fn() -> Box<dyn Problem>>) {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
     use super::*;
 
     const TEST_DATA: &str = "7 6 4 2 1

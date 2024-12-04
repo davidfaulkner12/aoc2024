@@ -77,6 +77,7 @@ fn register_day(p: &mut HashMap<String, fn() -> Box<dyn Problem>>) {
 use chumsky::prelude::*;
 
 #[derive(Debug, PartialEq)]
+#[allow(dead_code)] // We use the Num variant in testing
 enum Expr {
     Null,
     Num(u64),
