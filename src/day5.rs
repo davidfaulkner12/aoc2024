@@ -212,8 +212,6 @@ fn topological_sort(g: &Graph, nodes: &[NodeIndex]) -> Vec<NodeValue> {
         l.push(n);
     }
 
-    println!("{:?}\n{:?}", nodes, nodes_index);
-
     for n in nodes_index.iter() {
         // If we've already pushed this node, skip it.
         if p.contains(n) {
@@ -297,20 +295,46 @@ impl Day5Part2 {
     }
 }
 
-//impl Problem for Day5 {
-//    fn prob1(&mut self) -> Box<dyn std::fmt::Display> {
-//        Box::new(self.prob1_inner())
-//    }
-//
-//    fn prob2(&mut self) -> Box<dyn std::fmt::Display> {
-//        Box::new(self.prob2_inner())
-//    }
-//}
-//
-//#[distributed_slice(PROBLEMS)]
-//fn register_day(p: &mut HashMap<String, fn() -> Box<dyn Problem>>) {
-//    p.insert("day5".to_owned(), || Box::new(Day5::new()));
-//}
+#[derive(Default)]
+struct Day5 {
+    part1: Option<Day5Part1>,
+    part2: Option<Day5Part2>,
+}
+
+impl Day5 {
+    fn new() -> Self {
+        Day5 {
+            part1: Some(Day5Part1::new()),
+            part2: None,
+        }
+    }
+
+    fn prob1_inner(&mut self) -> usize {
+        let part1 = self.part1.take().unwrap();
+        let (part2, res) = part1.prob1_inner();
+        self.part2 = Some(part2);
+        res
+    }
+
+    fn prob2_inner(&mut self) -> usize {
+        self.part2.as_ref().unwrap().prob2_inner()
+    }
+}
+
+impl Problem for Day5 {
+    fn prob1(&mut self) -> Box<dyn std::fmt::Display> {
+        Box::new(self.prob1_inner())
+    }
+
+    fn prob2(&mut self) -> Box<dyn std::fmt::Display> {
+        Box::new(self.prob2_inner())
+    }
+}
+
+#[distributed_slice(PROBLEMS)]
+fn register_day(p: &mut HashMap<String, fn() -> Box<dyn Problem>>) {
+    p.insert("day5".to_owned(), || Box::new(Day5::new()));
+}
 
 #[cfg(test)]
 mod tests {
