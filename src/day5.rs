@@ -12,8 +12,12 @@ use crate::problem::{Problem, PROBLEMS};
 // https://smallcultfollowing.com/babysteps/blog/2015/04/06/modeling-graphs-in-rust-using-vector-indices/
 // and modified to carry a value
 type NodeValue = usize;
-type NodeIndex = usize;
-type EdgeIndex = usize;
+
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialOrd, PartialEq, Hash)]
+pub struct NodeIndex(usize);
+
+#[derive(Copy, Clone, Debug, Eq, Ord, PartialOrd, PartialEq)]
+pub struct EdgeIndex(usize);
 
 #[derive(Debug, Copy, Clone)]
 pub struct NodeData {
@@ -40,7 +44,7 @@ impl Graph {
         if let Some(index) = self.index.get(&value) {
             return *index;
         }
-        let index = self.nodes.len();
+        let index = NodeIndex(self.nodes.len());
         self.index.insert(value, index);
         self.nodes.push(NodeData {
             value,
@@ -63,16 +67,16 @@ impl Graph {
     // Note that this method does *NOT* check for duplicates
     fn add_edge(&mut self, source: NodeIndex, target: NodeIndex) {
         let edge_index = self.edges.len();
-        let node_data = &mut self.nodes[source];
+        let node_data = &mut self.nodes[source.0];
         self.edges.push(EdgeData {
             target,
             next_outgoing_edge: node_data.first_outgoing_edge,
         });
-        node_data.first_outgoing_edge = Some(edge_index);
+        node_data.first_outgoing_edge = Some(EdgeIndex(edge_index));
     }
 
     pub fn successors(&self, source: NodeIndex) -> Successors {
-        let first_outgoing_edge = self.nodes[source].first_outgoing_edge;
+        let first_outgoing_edge = self.nodes[source.0].first_outgoing_edge;
         Successors {
             graph: self,
             current_edge_index: first_outgoing_edge,
@@ -92,7 +96,7 @@ impl<'graph> Iterator for Successors<'graph> {
         match self.current_edge_index {
             None => None,
             Some(edge_num) => {
-                let edge = &self.graph.edges[edge_num];
+                let edge = &self.graph.edges[edge_num.0];
                 self.current_edge_index = edge.next_outgoing_edge;
                 Some(edge.target)
             }
@@ -171,12 +175,12 @@ fn contains_cycle(g: &Graph, filter: &HashSet<NodeIndex>) -> bool {
     g.nodes
         .iter()
         .enumerate()
-        .map(|(v, _)| dfs(g, filter, v, &mut visited, &mut finished))
+        .map(|(v, _)| dfs(g, filter, NodeIndex(v), &mut visited, &mut finished))
         .any(identity)
 }
 
 // Again, taken directly from Wikipedia. We ignore the cycle check
-fn topological_sort(g: &Graph, nodes: &[NodeIndex]) -> Vec<NodeValue> {
+fn topological_sort(g: &Graph, nodes: &[NodeValue]) -> Vec<NodeValue> {
     let mut l = Vec::with_capacity(nodes.len());
     // "Permanent mark"
     let mut p: HashSet<NodeIndex> = HashSet::new();
@@ -222,22 +226,19 @@ fn topological_sort(g: &Graph, nodes: &[NodeIndex]) -> Vec<NodeValue> {
 
     l.reverse();
 
-    l.into_iter()
-        .map(|n| g.nodes[n].value)
-        .filter(|n| nodes.contains(n))
-        .collect()
+    l.into_iter().map(|n| g.nodes[n.0].value).collect()
 }
 
 #[derive(Default)]
 pub struct Day5Part1 {
     rules: Graph,
-    updates: Vec<Vec<NodeIndex>>,
+    updates: Vec<Vec<NodeValue>>,
 }
 
 #[derive(Default)]
 pub struct Day5Part2 {
     rules: Graph,
-    invalid: Vec<Vec<NodeIndex>>,
+    invalid: Vec<Vec<NodeValue>>,
 }
 
 impl Day5Part1 {
@@ -380,22 +381,25 @@ mod tests {
         assert_eq!(g.nodes[0].value, 47);
         assert_eq!(g.nodes[1].value, 53);
 
-        assert_eq!(g.index.get(&(47 as usize)), Some(&(0 as usize)));
-        assert_eq!(g.index.get(&(53 as usize)), Some(&(1 as usize)));
+        assert_eq!(g.index.get(&(47 as usize)), Some(&NodeIndex(0)));
+        assert_eq!(g.index.get(&(53 as usize)), Some(&NodeIndex(1)));
         assert_eq!(g.index.get(&(77 as usize)), None);
 
         assert!(g.edge_set.contains(&(47, 53)));
 
         // This is by index, so node at index 0 is connected to node 1
-        assert_eq!(g.successors(0).collect::<Vec<_>>(), vec![1]);
-        assert_eq!(g.successors(1).collect::<Vec<_>>(), vec![]);
+        assert_eq!(
+            g.successors(NodeIndex(0)).collect::<Vec<_>>(),
+            vec![NodeIndex(1)]
+        );
+        assert_eq!(g.successors(NodeIndex(1)).collect::<Vec<_>>(), vec![]);
     }
 
     #[test]
     fn test_parse_rules() {
         let g = parse_rules(TEST_RULE_DATA);
 
-        let s = HashSet::from_iter(g.successors(0));
+        let s = HashSet::from_iter(g.successors(NodeIndex(0)));
 
         let mut expected = HashSet::with_capacity(4);
 
@@ -415,12 +419,18 @@ mod tests {
         g.add_node(53);
         g.add_edge_by_value(47, 53);
 
-        assert!(!contains_cycle(&g, &HashSet::from([0, 1])));
+        assert!(!contains_cycle(
+            &g,
+            &HashSet::from([NodeIndex(0), NodeIndex(1)])
+        ));
 
         g.add_edge_by_value(53, 47);
-        assert!(contains_cycle(&g, &HashSet::from([0, 1])));
+        assert!(contains_cycle(
+            &g,
+            &HashSet::from([NodeIndex(0), NodeIndex(1)])
+        ));
 
-        assert!(!contains_cycle(&g, &HashSet::from([0])));
+        assert!(!contains_cycle(&g, &HashSet::from([NodeIndex(0)])));
     }
 
     #[test]
