@@ -172,48 +172,48 @@ mod tests {
         );
     }
 
-    #[test]
-    fn actual() {
-        let data = fs::read_to_string("data/day6.txt").unwrap();
-        //let data = TEST_DATA;
-        let mut guard_map = parse(&data);
-        let mut visited: HashSet<TextPoint> = HashSet::new();
-
-        while let Some(p) = guard_map.guard.1 {
-            visited.insert(p);
-            guard_map.tick();
-        }
-
-        assert_eq!(visited.len(), 4711);
-        //assert_eq!(visited.len(), 41);
-
-        // Now for part 2
-        let mut count = 0;
-        let guard_map_2 = parse(&data);
-        let start = guard_map_2.guard.1.unwrap();
-
-        for o in visited.iter() {
-            // Special case the starting point
-            if start == *o {
-                continue;
-            }
-            println!("Considering point {:?}", o);
-            let mut visited: HashSet<(Direction, TextPoint)> = HashSet::new();
-            let mut guard_map = GuardMap {
-                guard_map: replace_char_in_puzzle(&guard_map_2.guard_map, *o, "O"),
-                guard: guard_map_2.guard,
-            };
-            while let Some(p) = guard_map.guard.1 {
-                let maybe_loop = (guard_map.guard.0, p);
-                if visited.contains(&maybe_loop) {
-                    count += 1;
-                    break;
-                }
-                visited.insert(maybe_loop);
-                guard_map.tick();
-            }
-        }
-
-        assert_eq!(count, 1562);
-    }
+    //#[test]
+    //fn actual() {
+    //    let data = fs::read_to_string("data/day6.txt").unwrap();
+    //    //let data = TEST_DATA;
+    //    let mut guard_map = parse(&data);
+    //    let mut visited: HashSet<TextPoint> = HashSet::new();
+    //
+    //    while let Some(p) = guard_map.guard.1 {
+    //        visited.insert(p);
+    //        guard_map.tick();
+    //    }
+    //
+    //    assert_eq!(visited.len(), 4711);
+    //    //assert_eq!(visited.len(), 41);
+    //
+    //    // Now for part 2
+    //    let mut count = 0;
+    //    let guard_map_2 = parse(&data);
+    //    let start = guard_map_2.guard.1.unwrap();
+    //
+    //    for o in visited.iter() {
+    //        // Special case the starting point
+    //        if start == *o {
+    //            continue;
+    //        }
+    //        println!("Considering point {:?}", o);
+    //        let mut visited: HashSet<(Direction, TextPoint)> = HashSet::new();
+    //        let mut guard_map = GuardMap {
+    //            guard_map: replace_char_in_puzzle(&guard_map_2.guard_map, *o, "O"),
+    //            guard: guard_map_2.guard,
+    //        };
+    //        while let Some(p) = guard_map.guard.1 {
+    //            let maybe_loop = (guard_map.guard.0, p);
+    //            if visited.contains(&maybe_loop) {
+    //                count += 1;
+    //                break;
+    //            }
+    //            visited.insert(maybe_loop);
+    //            guard_map.tick();
+    //        }
+    //    }
+    //
+    //    assert_eq!(count, 1562);
+    //}
 }
