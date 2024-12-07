@@ -11,10 +11,10 @@ use linkme::distributed_slice;
 use crate::problem::{Problem, PROBLEMS};
 
 // Intuitively we use row/col because that's how we index Vec<String>
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
-struct TextPoint {
-    row: usize,
-    col: usize,
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Hash)]
+pub struct TextPoint {
+    pub row: usize,
+    pub col: usize,
 }
 
 impl TextPoint {
@@ -34,7 +34,7 @@ impl TextPoint {
     }
 }
 
-fn explode_point(p: TextPoint, corner: TextPoint, length: usize) -> Vec<Vec<TextPoint>> {
+pub fn explode_point(p: TextPoint, corner: TextPoint, length: usize) -> Vec<Vec<TextPoint>> {
     let min_row = p.row.checked_sub(length - 1).unwrap_or(0);
     let min_col = p.col.checked_sub(length - 1).unwrap_or(0);
     let max_row = min(p.row + length - 1, corner.row);
@@ -92,7 +92,7 @@ fn explode_point(p: TextPoint, corner: TextPoint, length: usize) -> Vec<Vec<Text
     vectors
 }
 
-fn extract_string_from_vector(puzzle: &Vec<&str>, vector: &[TextPoint]) -> String {
+pub fn extract_string_from_vector(puzzle: &Vec<&str>, vector: &[TextPoint]) -> String {
     let bytes: Vec<_> = puzzle.iter().map(|s| s.as_bytes()).collect();
     str::from_utf8(
         &vector
@@ -104,7 +104,7 @@ fn extract_string_from_vector(puzzle: &Vec<&str>, vector: &[TextPoint]) -> Strin
     .to_string()
 }
 
-fn find_char_in_puzzle(puzzle: &Vec<&str>, c: u8) -> Vec<TextPoint> {
+pub fn find_char_in_puzzle(puzzle: &Vec<&str>, c: u8) -> Vec<TextPoint> {
     let bytes: Vec<_> = puzzle.iter().map(|s| s.as_bytes()).collect();
     bytes
         .iter()
