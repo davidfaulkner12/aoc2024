@@ -34,6 +34,10 @@ impl TextPoint {
     }
 }
 
+pub fn char_matrix(data: &str) -> Vec<Vec<u8>> {
+    data.lines().map(|s| s.as_bytes().to_vec()).collect()
+}
+
 pub fn explode_point(p: TextPoint, corner: TextPoint, length: usize) -> Vec<Vec<TextPoint>> {
     let min_row = p.row.checked_sub(length - 1).unwrap_or(0);
     let min_col = p.col.checked_sub(length - 1).unwrap_or(0);
@@ -92,21 +96,19 @@ pub fn explode_point(p: TextPoint, corner: TextPoint, length: usize) -> Vec<Vec<
     vectors
 }
 
-pub fn extract_string_from_vector(puzzle: &Vec<&str>, vector: &[TextPoint]) -> String {
-    let bytes: Vec<_> = puzzle.iter().map(|s| s.as_bytes()).collect();
+pub fn extract_string_from_vector(puzzle: &Vec<Vec<u8>>, vector: &[TextPoint]) -> String {
     str::from_utf8(
         &vector
             .iter()
-            .map(|p| bytes[p.row][p.col])
+            .map(|p| puzzle[p.row][p.col])
             .collect::<Vec<_>>(),
     )
     .unwrap()
     .to_string()
 }
 
-pub fn find_char_in_puzzle(puzzle: &Vec<&str>, c: u8) -> Vec<TextPoint> {
-    let bytes: Vec<_> = puzzle.iter().map(|s| s.as_bytes()).collect();
-    bytes
+pub fn find_char_in_puzzle(puzzle: &Vec<Vec<u8>>, c: u8) -> Vec<TextPoint> {
+    puzzle
         .iter()
         .enumerate()
         .flat_map(|(row, line)| {
@@ -123,7 +125,7 @@ pub fn find_char_in_puzzle(puzzle: &Vec<&str>, c: u8) -> Vec<TextPoint> {
 
 #[derive(Default)]
 pub struct Day4 {
-    data: Vec<String>,
+    data: Vec<Vec<u8>>,
 }
 
 impl Day4 {
@@ -134,7 +136,7 @@ impl Day4 {
 
     pub fn with_data(data: &str) -> Self {
         Day4 {
-            data: data.lines().map(|s| s.to_owned()).collect(),
+            data: char_matrix(data),
         }
     }
 
@@ -143,15 +145,14 @@ impl Day4 {
             row: self.data.len() - 1,
             col: self.data[0].len() - 1,
         };
-        let p = self.data.iter().map(AsRef::as_ref).collect();
-        let ps = find_char_in_puzzle(&p, b'X');
+        let ps = find_char_in_puzzle(&self.data, b'X');
         let vs: Vec<_> = ps
             .iter()
             .flat_map(|p| explode_point(*p, corner, 4))
             .filter(|v| v.len() == 4)
             .collect();
 
-        let words = vs.iter().map(|v| extract_string_from_vector(&p, v));
+        let words = vs.iter().map(|v| extract_string_from_vector(&self.data, v));
 
         //for (v, s) in vs.iter().zip(words.clone()) {
         //    println!("{:?} {:?}", v, s);
@@ -165,8 +166,7 @@ impl Day4 {
             row: self.data.len() - 1,
             col: self.data[0].len() - 1,
         };
-        let p = self.data.iter().map(AsRef::as_ref).collect();
-        let ps = find_char_in_puzzle(&p, b'M');
+        let ps = find_char_in_puzzle(&self.data, b'M');
         let vs: Vec<_> = ps
             .iter()
             .map(|p| explode_point(*p, corner, 3))
@@ -191,8 +191,8 @@ impl Day4 {
 
         for (_, v) in cs.iter() {
             for combos in v.iter().combinations(2) {
-                if (extract_string_from_vector(&p, combos[0]) == "MAS")
-                    && (extract_string_from_vector(&p, combos[1]) == "MAS")
+                if (extract_string_from_vector(&self.data, combos[0]) == "MAS")
+                    && (extract_string_from_vector(&self.data, combos[1]) == "MAS")
                 {
                     count += 1
                 }
@@ -321,13 +321,13 @@ MXMXAXMASX";
     #[test]
     fn test_extract() {
         let v = make_vector(&[(0, 5), (0, 6), (0, 7), (0, 8)]);
-        let p = TEST_DATA.lines().collect();
+        let p = char_matrix(TEST_DATA);
         assert_eq!(extract_string_from_vector(&p, &v), "XMAS");
     }
 
     #[test]
     fn test_find_char() {
-        let p = TEST_DATA.lines().collect();
+        let p = char_matrix(TEST_DATA);
         assert_eq!(
             find_char_in_puzzle(&p, b'X'),
             make_vector(&[

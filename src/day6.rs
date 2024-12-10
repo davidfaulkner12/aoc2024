@@ -1,7 +1,7 @@
 use day4::{explode_point, extract_string_from_vector, find_char_in_puzzle, TextPoint};
 use enum_iterator::{all, Sequence};
 
-use crate::day4;
+use crate::day4::{self, char_matrix};
 
 #[derive(Copy, Clone, Debug, PartialEq, Sequence, Hash, Eq)]
 enum Direction {
@@ -42,7 +42,7 @@ fn explode_point_with_directions(
 
 #[derive(Debug, Clone)]
 struct GuardMap {
-    guard_map: Vec<String>,
+    guard_map: Vec<Vec<u8>>,
     guard: (Direction, Option<TextPoint>),
 }
 
@@ -53,7 +53,6 @@ impl GuardMap {
             col: self.guard_map[0].len() - 1,
         };
 
-        let p = self.guard_map.iter().map(AsRef::as_ref).collect();
         if let Some(guard_point) = self.guard.1 {
             let all_moves = explode_point_with_directions(guard_point, corner, 2);
 
@@ -64,7 +63,7 @@ impl GuardMap {
                     .filter(|(d, _)| d == &self.guard.0)
                     .nth(0)
                     .unwrap();
-                let s = extract_string_from_vector(&p, &v.1);
+                let s = extract_string_from_vector(&self.guard_map, &v.1);
                 if s == "." {
                     self.guard.1 = None;
                     break;
@@ -82,13 +81,11 @@ impl GuardMap {
 }
 
 fn parse(data: &str) -> GuardMap {
-    let data: Vec<String> = data.lines().map(|s| s.to_owned()).collect();
+    let data: Vec<Vec<u8>> = char_matrix(data);
 
-    // This is awkward but matching the caller convention in day 4
-    let p = data.iter().map(AsRef::as_ref).collect();
-    let g = find_char_in_puzzle(&p, b'^')[0];
+    let g = find_char_in_puzzle(&data, b'^')[0];
 
-    let data = replace_char_in_puzzle(&data, g, ".");
+    let data = replace_char_in_puzzle(&data, g, b'.');
 
     GuardMap {
         guard_map: data,
@@ -96,18 +93,14 @@ fn parse(data: &str) -> GuardMap {
     }
 }
 
-fn replace_char_in_puzzle(puzzle: &[String], p: TextPoint, new: &str) -> Vec<String> {
+fn replace_char_in_puzzle(puzzle: &Vec<Vec<u8>>, p: TextPoint, new: u8) -> Vec<Vec<u8>> {
     let mut puzzle = puzzle.clone().to_vec();
-    let mut s = puzzle[p.row].clone();
-    s.replace_range(p.col..=p.col, new);
-    puzzle[p.row] = s;
+    puzzle[p.row][p.col] = new;
     puzzle
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashSet, fs};
-
     use super::*;
 
     const TEST_DATA: &str = "....#.....
@@ -146,7 +139,7 @@ mod tests {
             (Direction::N, Some(TextPoint { row: 6, col: 4 }))
         );
 
-        assert_eq!(res.guard_map[6].as_bytes()[4], b'.');
+        assert_eq!(res.guard_map[6][4], b'.');
     }
 
     #[test]
