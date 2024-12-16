@@ -4,7 +4,7 @@ use enum_iterator::{all, Sequence};
 use crate::day4::{self, char_matrix};
 
 #[derive(Copy, Clone, Debug, PartialEq, Sequence, Hash, Eq)]
-enum Direction {
+pub enum Direction {
     N,
     NE,
     E,
@@ -16,7 +16,7 @@ enum Direction {
 }
 
 impl Direction {
-    fn rotate_right(&self) -> Self {
+    pub fn rotate_right(&self) -> Self {
         match self {
             Direction::N => Direction::E,
             Direction::NE => Direction::SE,
@@ -28,9 +28,21 @@ impl Direction {
             Direction::NW => Direction::NE,
         }
     }
+    pub fn rotate_left(&self) -> Self {
+        match self {
+            Direction::N => Direction::W,
+            Direction::NW => Direction::SW,
+            Direction::W => Direction::S,
+            Direction::SW => Direction::SE,
+            Direction::S => Direction::E,
+            Direction::SE => Direction::NE,
+            Direction::E => Direction::N,
+            Direction::NE => Direction::NW,
+        }
+    }
 }
 
-fn explode_point_with_directions(
+pub fn explode_point_with_directions(
     p: TextPoint,
     corner: TextPoint,
     length: usize,

@@ -2,7 +2,7 @@ use crate::day4::TextPoint;
 use itertools::Itertools;
 
 #[derive(Debug, Eq, PartialEq)]
-struct TextDifference {
+pub struct TextDifference {
     row: isize,
     col: isize,
 }
