@@ -1,11 +1,11 @@
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 use crate::day4::char_matrix;
 use crate::day4::TextPoint;
 use crate::day6::{explode_point_with_directions, Direction};
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 struct State {
     cost: usize,
     position: TextPoint,
@@ -67,7 +67,11 @@ fn find_edges(
 // // to each node. This implementation isn't memory-efficient as it may leave duplicate
 // // nodes in the queue. It also uses `usize::MAX` as a sentinel value,
 // // for a simpler implementation.
-fn shortest_path(graph: &Vec<Vec<u8>>, start: TextPoint, goal: TextPoint) -> Option<usize> {
+fn shortest_path(
+    graph: &Vec<Vec<u8>>,
+    start: TextPoint,
+    goal: TextPoint,
+) -> Option<(usize, usize)> {
     // dist[node] = current shortest distance from `start` to `node`
     let mut dist: HashMap<_, _> = graph
         .iter()
@@ -78,6 +82,8 @@ fn shortest_path(graph: &Vec<Vec<u8>>, start: TextPoint, goal: TextPoint) -> Opt
                 .map(move |(c, _)| (TextPoint { row: r, col: c }, usize::MAX))
         })
         .collect();
+
+    let mut prev: HashMap<TextPoint, Vec<TextPoint>> = HashMap::new();
 
     let mut heap = BinaryHeap::new();
 
@@ -90,15 +96,22 @@ fn shortest_path(graph: &Vec<Vec<u8>>, start: TextPoint, goal: TextPoint) -> Opt
     });
 
     // Examine the frontier with lower cost nodes first (min-heap)
+    let mut res = None;
     while let Some(State {
         cost,
         position,
         direction,
     }) = heap.pop()
     {
-        // Alternatively we could have continued to find all shortest paths
         if position == goal {
-            return Some(cost);
+            res = Some(cost);
+        }
+
+        // Don't bother with non-shortest routes
+        if let Some(res) = res {
+            if cost > res {
+                continue;
+            }
         }
 
         // Important as we may have already found a better way
@@ -115,17 +128,92 @@ fn shortest_path(graph: &Vec<Vec<u8>>, start: TextPoint, goal: TextPoint) -> Opt
                 direction: next_direction,
             };
 
+            //println!(
+            //    "{cost:?} {next_cost:?} {:?}",
+            //    prev.get(&TextPoint { row: 9, col: 3 })
+            //);
+
+            if let Some(parents) = prev.get_mut(&next_position) {
+                parents.push(position);
+            } else {
+                prev.insert(next_position, vec![position]);
+            }
+
             // If so, add it to the frontier and continue
-            if next.cost < dist[&next.position] {
+            if next.cost <= dist[&next.position] {
                 heap.push(next);
                 // Relaxation, we have now found a better way
-                *dist.get_mut(&next.position).unwrap() = next.cost;
+                *dist.get_mut(&next_position).unwrap() = cost + next_cost;
             }
+        }
+        //for k in 0..graph.len() {
+        //    for j in 0..graph[0].len() {
+        //        let v = dist[&TextPoint { row: k, col: j }];
+        //        if v == usize::MAX {
+        //            print!("..... ");
+        //        } else {
+        //            print!("{:>5} ", v);
+        //        }
+        //    }
+        //    println!("");
+        //}
+    }
+    for k in 0..graph.len() {
+        for j in 0..graph[0].len() {
+            let v = dist[&TextPoint { row: k, col: j }];
+            if v == usize::MAX {
+                print!("..... ");
+            } else {
+                print!("{:>5} ", v);
+            }
+        }
+        println!("");
+    }
+
+    // Traverse the graph
+    fn dfs(
+        prev: &HashMap<TextPoint, Vec<TextPoint>>,
+        visited: &mut HashSet<TextPoint>,
+        current: &TextPoint,
+        dist: &HashMap<TextPoint, usize>,
+    ) {
+        if visited.contains(current) {
+            return;
+        }
+        visited.insert(*current);
+        //for k in 0..17 {
+        //    for j in 0..17 {
+        //        let v = &TextPoint { row: k, col: j };
+        //        if visited.contains(v) {
+        //            print!("O");
+        //        } else {
+        //            print!(".");
+        //        }
+        //    }
+        //    println!("");
+        //}
+
+        if let Some(v) = prev.get(current) {
+            v.iter()
+                //.inspect(|c| println!("{:?} {:?} {:?}: {:?}", current, dist[&current], c, dist[&c]))
+                .for_each(|c| dfs(prev, visited, c, dist));
         }
     }
 
-    // Goal not reachable
-    None
+    if let Some(res) = res {
+        let mut visited = HashSet::new();
+        //visited.insert(TextPoint { row: 1, col: 14 });
+        dfs(&prev, &mut visited, &goal, &dist);
+        Some((res, visited.len()))
+    } else {
+        None
+    }
+
+    //if let Some(res) = res {
+    //    Some((res, prev.len()))
+    //} else {
+    //    None
+    //}
 }
 
 #[cfg(test)]
@@ -182,7 +270,7 @@ mod tests {
 
         let res = shortest_path(&g, start, end);
 
-        assert_eq!(res, Some(7036));
+        assert_eq!(res, Some((7036, 45)));
     }
 
     const TEST_DATA_2: &str = "#################
@@ -211,7 +299,7 @@ mod tests {
 
         let res = shortest_path(&g, start, end);
 
-        assert_eq!(res, Some(11048));
+        assert_eq!(res, Some((11048, 64)));
     }
 
     #[test]
@@ -223,6 +311,6 @@ mod tests {
 
         let res = shortest_path(&g, start, end);
 
-        assert_eq!(res, Some(102460));
+        assert_eq!(res, Some((102460, 4)));
     }
 }

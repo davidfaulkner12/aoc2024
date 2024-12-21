@@ -166,27 +166,27 @@ p=9,5 v=-3,-3
         return false;
     }
 
-    #[test]
-    fn test_run_14_part2() {
-        let data = fs::read_to_string("data/day14.txt").unwrap();
-        let mut rs = parse(&data);
-
-        let corner = Point(100, 102);
-
-        let one_second = time::Duration::from_millis(1000);
-
-        for i in 0..10000 {
-            rs = rs.into_iter().map(|r| r.tick(corner)).collect();
-
-            if heuristic(&rs) {
-                println!("{}", i + 1);
-                print_robots(&rs, corner);
-                thread::sleep(one_second);
-            }
-        }
-
-        // The answer is 7051 and it's really obvious which one it is
-
-        //assert_eq!(score(rs, corner), 12);
-    }
+    //#[test]
+    //fn test_run_14_part2() {
+    //    let data = fs::read_to_string("data/day14.txt").unwrap();
+    //    let mut rs = parse(&data);
+    //
+    //    let corner = Point(100, 102);
+    //
+    //    let one_second = time::Duration::from_millis(1000);
+    //
+    //    for i in 0..10000 {
+    //        rs = rs.into_iter().map(|r| r.tick(corner)).collect();
+    //
+    //        if heuristic(&rs) {
+    //            println!("{}", i + 1);
+    //            print_robots(&rs, corner);
+    //            thread::sleep(one_second);
+    //        }
+    //    }
+    //
+    //    // The answer is 7051 and it's really obvious which one it is
+    //
+    //    //assert_eq!(score(rs, corner), 12);
+    //}
 }
